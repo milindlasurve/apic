@@ -8,10 +8,13 @@ docker-registry-default.104.211.217.70.nip.io
  kubectl -n default port-forward svc/docker-registry 5000:5000
 
  
+ 104.211.209.227
 
 Computer name :- ocpcluster-bastionA
 
 Public IP address :- 104.211.219.206
+Public IP address :-  104.211.209.227
+
 
 Private IP address :- 172.200.0.4172.200.0.4
 
