@@ -1,3 +1,5 @@
+BYcd9kgH
+
 #!/bin/sh
 ip=`curl ifconfig.me`
 NAMESPACE=apiconnect
