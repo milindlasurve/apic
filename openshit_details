@@ -1,5 +1,7 @@
 Kindly find the details below.
 
+docker-registry-default.104.211.217.70.nip.io
+
  kubectl -n default port-forward svc/docker-registry 5000:5000
 
  
