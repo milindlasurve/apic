@@ -1,0 +1,1069 @@
+
+ 
+
+
+IBM Cloud Pak for Integration Deployment Guide
+Red Hat OpenShiftv3.11
+ICP 3.2.0.1906 
+Cloud Pak for Integration 2019.3.1
+[App Connect Enterprisev11.0.0.5]
+Rubayat Khan (rubayatk@ae.ibm.com)
+
+
+Contents
+1.	Self-Managed Red Hat OpenShift Container Platform on Microsoft Azure	4
+1.1	Red Hat OpenShift Container Platform	4
+1.1.1	Platform Architecture Overview	4
+2.	Red Hat OpenShift Container Platform on Azure Cloud Architecture Overview	7
+2.1	Virtual Machine Requirements	7
+2.1.1	Master Nodes	7
+2.1.2	Infrastructure Nodes	7
+2.1.3	Application Nodes	8
+2.1.4	Bastian Node	8
+2.2	Physical Architecture	8
+2.2.1	OCP server CPU/RAM/IP information	8
+2.2.2	Operating System version	9
+2.2.3	Redhat OpenShift version	9
+2.2.4	Redhat Repositories Configured	9
+2.3	Software Packages	9
+2.3.1	From Passport Advantage:	9
+2.4	References:	9
+3.	Self-Managed Red Hat OpenShift Deployment	10
+3.1	Prerequisite Configuration	10
+3.1.1	Generate a Key Pair	10
+3.1.2	Upload the Private Key to a Key Vault	10
+3.2	Deployment	10
+3.2.1	Step 1 Basics	11
+3.2.2	Step 2 Infrastructure Settings	12
+3.2.3	Step 3 OCP Settings	13
+3.2.4	Step 5 Summary Page	14
+3.2.5	Deployment Completion	14
+3.2.6	Validation Step	14
+3.3	Cloud Pak for Integration Installation	16
+3.3.1	Pre-requisites	16
+3.3.1.1	Filesystem (/opt) extension of disk	16
+3.3.1.2	Filesystem (/var) extension of disk	16
+3.3.1.3	Setting up the NFS Server	17
+3.3.1.4	Setting up storage class on OpenShift Cluster	18
+3.3.1.5	Install Docker on the Bastian Node	19
+3.3.2	Installation of CP4I	20
+3.3.2.1	Manual Workarounds	24
+4.	DevOps Build	29
+5.	Access Summary	30
+5.1	Accessing OCP cluster from command line	30
+5.2	Accessing OCP cluster from the Web Console	30
+5.3	Accessing ICP cluster from command line	30
+5.4	Accessing ICP cluster from the Web Console	30
+5.5	App Connect Routes:	30
+5.6	Jenkins Routes:	30
+6.	RedHat OpenShift Administration	31
+6.1	User Administration	31
+6.2	Performance Testing	31
+6.2.1	Disk bandwidth Test	31
+6.2.2	FIO Test	31
+6.2.3	ETCD Performance Check	34
+
+ 
+1.	Self-Managed Red Hat OpenShift Container Platform on Microsoft Azure
+
+The simplest way to deploy a self-managed OpenShift Container Platform cluster into Azure is to use the Azure Marketplace offer.
+ 
+
+1.1	Red Hat OpenShift Container Platform
+1.1.1	Platform Architecture Overview
+Node	Description
+Bastian Node	This is the deployment node OR ansible node, that stores the playbooks to install openshift container platform
+Master Node	The Master nodes contains all the kubernetes control components such as API Server, etcd and Controller Manger Server 
+Infra Node 	Infrastructure Nodes are labelled nodes or tainted worker nodes to run pieces of OpenShift Container Platform environment. Two important components that run on the Infra Nodes is the Docker Registry and the OpenShift SDN Router
+Application Node 	Application nodes also known as worker nodes, deploys the application related resources such as pods, configmapsetc
+
+ 
+
+
+ 
+
+
+2.	Red Hat OpenShift Container Platform on Azure Cloud Architecture Overview
+2.1	Virtual Machine Requirements
+This section describes compute prerequisites of Red Hat OpenShift Container Platform (OCP).
+2.1.1	Master Nodes
+The following table describes the flavor of the virtual machines used for the Self-Managed Red Hat OpenShift Container Platform for the Master Nodes 
+Size	vCpus	RAM	Disk 1 
+OS	Disk 2 
+/mnt/resource	Disk3
+docker-vg
+Standard D16s_v3	16	64GB	64GB	128GB	64GB
+Standard D16s_v3	16	64GB	64GB	128GB	64GB
+Standard D16s_v3	16	64GB	64GB	128GB	64GB
+
+2.1.2	Infrastructure Nodes
+The following table describes the flavor of the virtual machines used for the Self-Managed Red Hat OpenShift Container Platform for the Infrastructure Nodes 
+Size	vCpus	RAM	Disk 1 
+OS	Disk 2 
+/mnt/resource	Disk 3
+docker-vg	Disk 4
+/data
+Standard D16s_v3	16	64GB	64GB	128GB	64GB	100GB
+Standard D16s_v3	16	64GB	64GB	128GB	64GB	N/A
+Standard D16s_v3	16	64GB	64GB	128GB	64GB	N/A
+
+*Disk 4 needs to be added to cater for the temporary NFS Storage Solution
+ 
+2.1.3	Application Nodes
+The following table describes the flavor of the virtual machines used for the Self-Managed Red Hat OpenShift Container Platform for the Application Nodes 
+Size	vCpus	RAM	Disk 1 
+OS	Disk 2 
+/mnt/resource	Disk3
+docker-vg
+Standard D16s_v3	16	64GB	64GB	128GB	64GB
+Standard D16s_v3	16	64GB	64GB	128GB	64GB
+Standard D16s_v3	16	64GB	64GB	128GB	64GB
+
+2.1.4	Bastian Node
+The following table describes the flavor of the virtual machines used for the Self-Managed Red Hat OpenShift Container Platform for the Bastian Node
+Size	vCpus	RAM	Disk 1 
+OS	Disk 2 
+/mnt/resource	Disk 3
+var-vg	Disk 4
+/opt
+Standard D4s_v3	4	16GB	32GB	32GB	100GB	100GB
+
+*Disk 3 is needed to extended the /var filesystem; Importing Docker Images in Bastian Node requires a larger filesystem 
+*Disk 4 is needed for the Cloud Pak for Integration Software Packages and installer files. 
+2.2	Physical Architecture
+2.2.1	OCP server CPU/RAM/IP information
+Node Role	hostname	Public IP Address	Private IP Address	Cores	RAM (GB)
+Ansible	esbazocpnp-bastian	XX	10.1.0.4	4	16
+Master 01	esbazocpnp-master01		10.1.0.6	16	64
+Master 02	esbazocpnp-master02		10.1.0.7	16	64
+Master 03	esbazocpnp-master03		10.1.0.5	16	64
+Infra 01	esbazocpnp-infra01		10.2.0.4	16	64
+Infra 02	esbazocpnp-infra02		10.2.0.6	16	64
+Infra 03	esbazocpnp-infra03		10.2.0.5	16	64
+Node 01	esbazocpnp-node01		10.3.0.5	16	64
+Node 02	esbazocpnp-node02		10.3.0.6	16	64
+Node 03	esbazocpnp-node03		10.3.0.4	16	64
+Master-Loadbalancer		XX			
+Infra-Loadbalancer		XX			
+2.2.2	Operating System version
+Redhat Enterprise Linux 7.764bit
+2.2.3	Redhat OpenShift version
+Redhat OpenShift Container Platform 3.11
+2.2.4	Redhat Repositories Configured
+repo id                                                                           repo name                                                                                    status
+!azure-cli                                                                        Azure CLI                                                                                       55
+!rh-gluster-3-client-for-rhel-7-server-rpms/7Server/x86_64                        Red Hat Storage Native Client for RHEL 7 (RPMs)                                                284
+!rhel-7-fast-datapath-rpms/7Server/x86_64                                         Red Hat Enterprise Linux Fast Datapath (RHEL 7 Server) (RPMs)                                  252
+!rhel-7-server-ansible-2.6-rpms/x86_64                                            Red Hat Ansible Engine 2.6 RPMs for Red Hat Enterprise Linux 7 Server                           24
+!rhel-7-server-extras-rpms/x86_64                                                 Red Hat Enterprise Linux 7 Server - Extras (RPMs)                                             1182
+!rhel-7-server-optional-rpms/7Server/x86_64                                       Red Hat Enterprise Linux 7 Server - Optional (RPMs)                                          19198
+!rhel-7-server-ose-3.11-rpms/x86_64                                               Red Hat OpenShift Container Platform 3.11 (RPMs)                                               664
+!rhel-7-server-rpms/7Server/x86_64                                                Red Hat Enterprise Linux 7 Server (RPMs)                                                     26310
+2.3	Software Packages
+2.3.1	From Passport Advantage:
+1-	IBM_CLOUD_PAK_FOR_INTEGRATION_201.tar.gz(CC2VQEN)
+2.4	References:
+1-	Self-Managed Red Hat OpenShift Container Platform on Azure 
+https://docs.microsoft.com/en-us/azure/virtual-machines/linux/openshift-marketplace-self-managed
+2-	Cloud Pak for Integration System Requirements 
+https://www.ibm.com/support/knowledgecenter/en/SSGT7J/install/sysreqs.html
+
+
+3.	Self-Managed Red Hat OpenShift Deployment
+3.1	Prerequisite Configuration
+3.1.1	Generate a Key Pair
+[CLI]# ssh-keygen -t rsa -C clusteradmin
+
+[SAMPLE OUTPUT]
+-rw-------  1 RubayatKhan  staff   3.3K Sep  6 14:37 id_rsa
+-rw-r--r--  1 RubayatKhan  staff   738B Sep  6 14:37 id_rsa.pub
+
+Convert the Public Key to ssh2 PEM format 
+[CLI]# ssh-keygen -f id_rsa.pub -e -m RFC4716> ~/.ssh/mykeys/id_rsa_ssh2.pem
+
+[SAMPLE OUTPUT]
+-rw-------  1 RubayatKhan  staff   3.3K Sep  6 14:37 id_rsa
+-rw-r--r--  1 RubayatKhan  staff   738B Sep  6 14:37 id_rsa.pub
+-rw-r--r--  1 RubayatKhan  staff   861B Sep  6 14:38 id_rsa_ssh2.pem
+3.1.2	Upload the Private Key to a Key Vault
+Note: Ensure that you upload the Private Key to a KeyVault on a different Resource Group then the one used by the Self-Managed Red Hat OpenShift Container Platform. 
+RECOMMENDED APPROACH: 
+Due to the Azure Portal Web UI not able to parse the private key properly, using the Azure Cli is the recommended approach. 
+[CLI]# az login
+[CLI]# azkeyvault create -n IBMKeyVault -g IBMKeyVaultGroup -l 'West Europe' --enabled-for-template-deployment true
+[CLI]# azkeyvault secret set --vault-name IBMKeyVault -n myprivatekey --file `/.ssh/id_rsa
+3.2	Deployment
+The following screenshots from the Azure Portal Web UI will depict how to deploy a self-managed Red Hat OpenShift Container Platform
+3.2.1	Step 1 Basics
+ 
+
+Parameter	Input	Remarks
+VM Admin Name	clusteradmin	you can leave this as default or choose a different admin name
+SSH Public Key for VM Admin User	*****	Paste the Public Key in SSH2 PEM Format
+Subscription	SB-ZAR-POC-CloudNative	
+Resource Group	WEU-Datapower	ensure that this resource group is completely empty
+Location	(Europe) West Europe	
+
+3.2.2	Step 2 Infrastructure Settings
+ 
+
+Parameter	Input	Remarks
+Master Node Size	Standard D4sv3	Post Deployment changed to "Standard D16s_v3"
+Infrastructure Node Size	Standard D4sv3	Post Deployment changed to "Standard D16s_v3"
+No. of Application Nodes	3	
+Application Node Size	Standard D4sv3	Post Deployment changed to "Standard D16s_v3"
+Bastian Host Size	Standard Ds v3	Post Deployment changed to "Standard D4sv3"
+New or Existing Virtual network 	Default	
+Default CIDR	Default	
+Key Vault Group Name	WEU-DatapowerKeys	
+Key Vault Name	*****	Refer to Section 3.1.2 
+Secret Name	*****	Refer to Section 3.1.2
+
+3.2.3	Step 3 OCP Settings
+ 
+
+Parameter	Input	Remarks
+OpenShift Admin User Password 	*****	Note, the user name is same as the VM Admin User Name 
+Confirm OpenShift Admin User Password	*****	From Red Hat Portal 
+Red Hat Subscription Manager User Name	*****	From Red Hat Portal
+Red Hat Subscription Manager Pool ID	*****	From Red Hat Portal
+Red Hat Subscription Manager Pool ID (master/broker nodes)	*****	From Red Hat Portal 
+Configure Azure Cloud Provider	No	Note: If you choose No, you will notbe able to use Azure Storage Class Provisioners 
+
+3.2.4	Step 5 Summary Page
+ 
+
+Validate if all the information set is correct and click on OK. You will be asked to ACCEPTthe Red Hat OpenShift Licence Agreement Terms & Conditions Page and then you can proceed with the deployment 
+3.2.5	Deployment Completion
+Based on the experience and the settings provided, it takes approximately 1 hour and 30 minutes to complete the deployment. 
+3.2.6	Validation Step
+1.	Once the deployment is complete, validate all the resource objects created by Azure on the resource are correct and working fine. 
+2.	Try to login to the OpenShift Console using the public URL provided. This would be the DNS name of the Master Loadbalancer that is configured as part of the overall deployment process 
+
+ 
+
+3.	Also ensure that you can login to the OpenShift Cluster using the CLI 
+[CLI]# ssh -iid_rsaclusteradmin@bastiondns*********.westeurope.cloudapp.azure.com
+
+[BASTIAN HOST]
+[CLI]# oc login
+Authentication required for https://masterdns*********.westeurope.cloudapp.azure.com:443 (openshift)
+Username: clusteradmin
+Password: *******
+Login successful.
+
+ 
+3.3	Cloud Pak for Integration Installation
+3.3.1	Pre-requisites
+The following are set of pre-requisite work that needs to be applied on the Red Hat OpenShift environment prior to performing the Cloud Pak for Integration Installation. This may not be mandatory for all cases, however explanations for each of the pre-requisites are clearly defined. 
+3.3.1.1	Filesystem (/opt) extension of disk
+Standard VM sizes on Azure, provided a fixed disk capacity for the root partition which includes /opt, however that size is not enough and in order to ensure there is enough capacity the following steps have been performed. 
+
+The IBM Software packages that were downloaded and installed will be placed in the /opt directory. However in order to extend filesystem the following procedures have been addressed:
+[CLI]# pvcreate/dev/sdd
+[CLI]# vgcreatevg_opt /dev/sdd
+[CLI]# lvcreate -n lv_opt -l 100%FREEvg_opt
+[CLI]# mkfs.xfs /dev/mapper/vg_opt-lv_opt
+[CLI]# mount /dev/mapper/vg_opt-lv_opt /opt
+[CLI]# cat /proc/mounts | grep /opt >> /etc/fstab
+
+[CLI]# cd /opt && ls -ltr
+-rw-r--r--. 1 root         root         23233574167 Jul 30 10:18 IBM_CLOUD_PAK_FOR_INTEGRATION_201.tar.gz
+3.3.1.2	Filesystem (/var) extension of disk
+Standard VM sizes on Azure, provided a fixed disk capacity for the root partition which includes /var, however that size is not enough and in order to ensure there is enough capacity the following steps have been performed. Major issues were with "docker load"
+
+[CLI]# pvcreate/dev/sdc
+[CLI]# vgcreatevg_var /dev/sdc
+[CLI]# lvcreate -n lv_var -l 100%FREEvg_var
+[CLI]# mkfs.xfs /dev/mapper/vg_var-lv_var
+[CLI]# mkdir /var1
+[CLI]# mount /dev/mapper/vg_var-lv_var /var1
+[CLI]# cd /var
+[CLI]# cp -dpRx * /var1
+[CLI]# umount /var1
+[CLI]# cd ..
+[CLI]# mount /dev/mapper/vg_var-lv_var /var
+[CLI]# cat /proc/mounts | grep /var >> /etc/fstab
+[CLI]# restorecon -vvFR /var
+[CLI]# vi /etc/default/grub
+
+Add 
+GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rd.lvm.lv=vg_var/lv_varrhgb quiet"
+
+[CLI]# cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r).img.$(date +%m-%d-%H%M%S).bak
+[CLI]# dracut -v -f /boot/initramfs-$(uname -r).img $(uname -r)
+[CLI]# shutdown -r now
+[CLI]#
+3.3.1.3	Setting up the NFS Server
+If you choose the Azure Cloud Provider option that this is not required, since the Azure Cloud Provider would give the OpenShift Container Platform access to the Azure APIs to provision Azure Disks dynamically (StorageClass). In our case, we did not attempt this option, thus we opted for a standalone NFS Server that would be installed on the Infrastructure Node 01 as a temporary solution. 
+
+Setup a separate disk partition for the NFS Storage 
+[CLI]# mkdir /data
+[CLI]# pvcreate/dev/sdd
+[CLI]# vgcreatevg_nfs /dev/sdd
+[CLI]# lvcreate -n lv_nfs -l 100%FREEvg_nfs
+[CLI]# mkfs.xfs /dev/mapper/vg_nfs-lv_nfs
+[CLI]# mount /dev/mapper/vg_nfs-lv_nfs /data
+[CLI]# cat /proc/mounts | grep /data>> /etc/fstab
+
+Install the NFS Server on InfraNode01
+[CLI]# yum install -y nfs-utils
+[CLI]# systemctl enable rpcbind
+[CLI]# systemctl enable nfs-server
+[CLI]# systemctl start rpcbind
+[CLI]# systemctl start nfs-server
+chmod -R 755 /data
+
+vi /etc/exports 
+
+/data *(rw,sync,no_root_squash)
+
+[CLI]# exportfs -a 
+Because OpenShift is installed on this node, the iptables are set to enabled and you need to open the following firewall ports by modifying the iptables configuration file. 
+
+[CLI]# vi /etc/sysconfig/iptables
+Add the follwing:
+
+# Opened Ports for NFS Server
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 2049 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport 2049 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 111 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport 111 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 20048 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport 20048 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport 47856 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 51740 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport 36600 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 33359 -j ACCEPT
+
+systemctl restart iptables.service
+
+Test the NFS connection from the NFS Clients 
+Login in to all the Openshift Cluster Nodes, and test the followingcommand: 
+
+showmount -e 10.2.0.4 # IP address of the NFS Server
+
+Output: 
+Export list for 10.2.0.4:
+/data *
+3.3.1.4	Setting up storage class on OpenShift Cluster
+On the Bastian Node run the following commands: 
+
+cd /opt
+$ curl -L -o kubernetes-incubator.ziphttps://github.com/kubernetes-incubator/external-storage/archive/master.zip
+unzip kubernetes-incubator.zip
+$ cd external-storage-master/nfs-client/
+
+oc login 
+$ NAMESPACE=`oc project -q`
+$ sed -i'' "s/namespace:.*/namespace: $NAMESPACE/g" ./deploy/rbac.yaml
+$ oc create -f deploy/rbac.yaml
+ocadm policy add-scc-to-user hostmount-anyuidsystem:serviceaccount:$NAMESPACE:nfs-client-provisioner
+
+vi deploy/deployment.yaml
+
+Modify the following: 
+
+env:
+            - name: PROVISIONER_NAME
+value: cp4i/nfs
+            - name: NFS_SERVER
+value: 10.2.0.4
+            - name: NFS_PATH
+value: /data
+volumes:
+        - name: nfs-client-root
+nfs:
+            server: 10.2.0.4
+path: /data
+
+vi deploy/class.yaml
+Modify the following: 
+
+name: managed-nfs-storage
+provisioner: cp4i/nfs
+
+$ oc create -f deploy/class.yaml
+$ oc create -f deploy/deployment.yaml
+
+Parameter	Input	Remarks
+Provisioner Name	cp4i/nfs	you can setup any name for this provisioner 
+NFS Server	10.2.0.4	IP Address of the NFS Server
+NFS Path 	/data	Path where we intend to share storage 
+Name	managed-nfs-storage	Storage Class Name
+
+Testing the storage class
+
+$ oc create -f deploy/test-claim.yaml
+$ oc get pvc
+NAME STATUS VOLUME CAPACITY ACCESS MODES STORAGECLASS AGE
+
+test-claimBoundpvc-88cb0c46–2617–11e9–87e4–000d3a444ea01MiRWX managed-nfs-storage 2h
+Reference: 
+https://medium.com/faun/openshift-dynamic-nfs-persistent-volume-using-nfs-client-provisioner-fcbb8c9344e
+
+Patch the StorageClass to be default 
+
+kubectl patch storageclass managed-nfs-storage -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
+3.3.1.5	Install Docker on the Bastian Node
+Standard Installation of OpenShift Container Platform does not install Docker on the Bastian. The following steps need to perform as part of the pre-requisites for the Cloud Pak for Integration Installation 
+
+yum install -y docker-1.13.1
+
+vi /etc/sysconfig/docker
+
+Add the following line:
+
+# Adding insecure-registry option required by OpenShift
+OPTIONS=' --selinux-enabled       --signature-verification=False'
+
+ADD_REGISTRY='--add-registry registry.redhat.io'
+
+systemctl restart docker 
+ 
+3.3.2	Installation of CP4I
+There are three components that need to be installed by the Cloud Foundation Common Services (previously known as IBM Cloud Private). 
+•	ICP-Master 
+•	ICP-Proxy 
+•	ICP-Management 
+
+It was an architectural decision by the local team to decide to place the ICP Common Services on the OpenShift Infrastructure Nodes. The placement of the functions are mentioned in the table below:
+
+OpenShift 	Functions 	ICP	Functions
+All Master Nodes 	k8s master
+etcd
+registry-console
+openshift-console
+web-console		
+Infrastructure Node 01	openshift-monitoring
+docker-registry
+router	Master	k8s master*
+etcd*
+calico*
+docker-registry*
+auth
+catalog-ui
+helm/tiller
+console ingress
+mongodb
+platform-ui/api
+cert-manager
+Infrastructure Node 02	openshift-monitoring
+docker-registry
+router	Proxy	app ingress
+Infrastructure Node 03	openshift-monitoring
+docker-registry
+router	Management 	metering
+monitoring
+logging
+Compute	Application Workload	Worker 	Application Workload
+
+*Not used when running on OpenShift 
+
+Reference: 
+@James Hewitt 
+https://ibm.box.com/s/kg3x5flzk6gu1ag6jgfsdr2y6nmj0x5q
+
+Unpack the IBM Cloud Pak for Integration Package
+
+sudo tar xfIBM_CLOUD_PAK_FOR_INTEGRATION_201.tar.gz
+total 27604328
+drwxrwxr-x. 3 clusteradminclusteradmin          21 Jul 29 13:54 installer_files
+-rw-r--r--. 1 root         root         23233574167 Jul 30 10:18 IBM_CLOUD_PAK_FOR_INTEGRATION_201.tar.gz
+Add the Private key and Kubeconfig Files 
+cd /opt/installer_files/cluster
+kubectl config view --raw >kubeconfig
+
+# Please note that you have to be logged in as the clusteradmin user to perform the below step, since it's the clusteradmins public key that is stored in all the OCP nodes 
+[clusteradmin@ocpcluster-bastion cluster]$cp ~/.ssh/id_rsa>ssh_key
+
+Upload the ICP 3.2.0.1906 Images 
+cd /opt/installer_files/cluster/images
+tar xfibm-cloud-private-rhos-3.2.0.1906.tar.gz -O | sudo docker load
+Port Forward the Docker-Registry Service 
+vi /etc/hosts 
+
+127.0.0.1 docker-registry.default.svc
+
+kubectl -n default port-forward svc/docker-registry 5000:5000
+
+Config.yaml
+# Licensed Materials - Property of IBM
+# IBM Cloud private
+# @ Copyright IBM Corp. 2019 All Rights Reserved
+# US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
+---
+# A list of OpenShift nodes that used to run ICP components
+cluster_nodes:
+  master:
+    - ocpcluster-infra01
+  proxy:
+    - ocpcluster-infra02
+  management:
+    - ocpcluster-infra03
+
+storage_class: managed-nfs-storage
+
+openshift:
+  console:
+    host: masterdns******.westeurope.cloudapp.azure.com
+    port: 443
+  router:
+cluster_host: icp-console.<infra-loadbalancer-domain>
+proxy_host: icp-proxy.<infra-loadbalancer-domain>
+
+default_admin_password: *******
+password_rules: 
+- '(.*)'
+
+## You must have different ports if you deploy nginx ingress to OpenShift master node
+# ingress_http_port: 80
+# ingress_https_port: 443
+ingress_http_port: 8080
+ingress_https_port: 8443
+
+
+kubernetes_cluster_type: openshift
+## You can disable following services if they are not needed
+## Disabling services may impact the installation of IBM CloudPaks.
+## Proceed with caution and refer to the Knowledge Center document for specific considerations.
+# auth-idp
+# auth-pap
+# auth-pdp
+# catalog-ui
+# helm-api
+# helm-repo
+# icp-management-ingress
+# metering
+# metrics-server
+# mgmt-repo
+# monitoring
+# nginx-ingress
+# platform-api
+# platform-ui
+# secret-watcher
+# security-onboarding
+# web-terminal
+
+management_services:
+  monitoring: enabled
+  metering: enabled
+  logging: enabled
+  custom-metrics-adapter: disabled
+  platform-pod-security: enabled
+
+
+
+archive_addons:
+icp4i:
+    namespace: integration
+    repo: local-charts
+    path: icp4icontent/IBM-Cloud-Pak-for-Integration-2.0.0.tgz
+scc: ibm-anyuid-scc
+
+    charts:
+    - name: ibm-icp4i-prod
+pullSecretValue: image.pullSecret
+      values:
+        image:
+pullSecret: sa-integration
+tls:
+          hostname: icp-proxy.<infra-loadbalancer-domain> #hostname of the ingress proxy to be configured
+          generate: true
+
+mq:
+    namespace: mq
+    repo: local-charts
+    path: icp4icontent/IBM-MQ-Advanced-for-IBM-Cloud-Pak-for-Integration-3.0.0.tgz
+scc: ibm-anyuid-scc
+
+  ace:
+    namespace: ace
+    repo: local-charts
+    path: icp4icontent/IBM-App-Connect-Enterprise-for-IBM-Cloud-Pak-for-Integration-2.0.0.tgz
+scc: ibm-anyuid-scc
+
+eventstreams:
+    namespace: eventstreams
+    repo: local-charts
+    path: icp4icontent/IBM-Event-Streams-for-IBM-Cloud-Pak-for-Integration-1.3.1-for-OpenShift.tgz
+scc: ibm-restricted-scc
+
+apic:
+    namespace: apic
+    repo: local-charts
+    path: icp4icontent/IBM-API-Connect-Enterprise-for-IBM-Cloud-Pak-for-Integration-1.0.1.tgz
+scc: ibm-anyuid-hostpath-scc
+
+  aspera:
+    namespace: aspera
+    repo: local-charts
+    path: icp4icontent/IBM-Aspera-High-Speed-Transfer-Server-for-IBM-Cloud-Pak-for-Integration-1.2.1.tgz
+scc: ibm-anyuid-hostaccess-scc
+
+datapower:
+    namespace: datapower
+    repo: local-charts
+    path: icp4icontent/IBM-DataPower-Virtual-Edition-for-IBM-Cloud-Pak-for-Integration-1.0.3.tgz
+scc: ibm-anyuid-scc
+
+assetrepo:
+    namespace: integration
+    repo: local-charts
+    path: icp4icontent/IBM-Cloud-Pak-for-Integration-Asset-Repository-2.0.0.tgz
+scc: ibm-anyuid-scc
+
+Parameter	Sample Input	Remarks
+cluster_node.master	ocpcluster-infra01	In our architecture, we selected the Infrastructure Node 01
+cluster_node.proxy	ocpcluster-infra02	In our architecture, we selected the Infrastructure Node 02
+cluster_node.management	ocpcluster-infra03	In our architecture, we selected the Infrastructure Node 03
+storage_class	managed-nfs-storage	Storage Class Name
+default_admin_password	******	Note: The user name is admin default and this cannot be changed. 
+password_rules	'(.*)'	This entry will accept all regex of the password
+openshift.console.host	masterdns********.westeurope.cloudapp.azure.com	
+opensfhit.console.port	443	
+openshift.router.cluster_host	icp-console.<infra-loadbalancer-domain>	
+openshift.router.proxy_host	icp-proxy.<infra-loadbalancer-domain>	
+ingress_http_port	8080	Note: Since we are placing icp-proxy on Infrastructure node 02, port needs to be different
+ingress_https_port	8443	Note: Since we are placing icp-proxy on Infrastructure node 02, port needs to be different
+archive_addons.icp4i.charts.values.tls.hostname	icp-proxy.<infra-loadbalancer-domain>	Same as the openshift.router.proxy_host
+
+Label the nodes 
+oc label node esbazocpnp-infra01 node-role.kubernetes.io/compute=true
+oc label node esbazocpnp-infra02 node-role.kubernetes.io/compute=true
+oc label node esbazocpnp-infra03 node-role.kubernetes.io/compute=true
+
+Run the Installation playbook 
+cd /opt/installer_files/cluster
+
+sudo docker run -t --net=host -e LICENSE=accept -v $(pwd):/installer/cluster:z -v /var/run:/var/run:z --security-opt label:disableibmcom/icp-inception-amd64:3.2.0.1906-rhel-ee install-with-openshift -vvv
+
+Make changes to the Pod Isolation (TS002758368)
+The openshift container platform is deployed with the followign configuration (TS002758368)
+
+/etc/ansible/hosts 
+
+os_sdn_network_plugin_name='redhat/openshift-ovs-multitenant'
+
+Openshift-ovs-multitenant provides pod isolation on namespace level. 
+
+ocadm pod-network make-projects-global kube-system
+So this seems like a bug for the common services team, when installing the ingress controller it needs to set the project to global, or put it in default.
+
+
+Url: https://icp-proxy.40.118.70.236.nip.io/integration
+ 
+
+
+ICP Logging was facing with the following issue (TS002851563)
+ 
+
+Fix:
+Add the entry HostPID: true to the FileBeatDaemonSet
+
+ocedit ds logging-elk-filebeat-ds
+
+
+spec:
+hostPID: true
+      containers:
+      - env:
+Delete all the filebeat pods, so that they can restart and the issue will be resolved. 
+
+
+OCP Logging has an issue:
+https://access.redhat.com/solutions/3700981
+
+
+3.3.2.1	Manual Workarounds
+The Installation playbook did not complete successfully, CASE TS002758345 was opened, meanwhile the following workarounds were suggested to proceed further. 
+
+Access the ICP UI 
+
+InstallCloudctl
+cd /opt
+curl -kLocloudctl-linux-amd64-v3.2.0-634 https://icp-console.40.68.250.242.nip.io:443/api/cli/cloudctl-linux-amd64
+
+chmod 755 cloudctl-linux-amd64-v3.2.0-634 
+mv cloudctl-linux-amd64-v3.2.0-634 /usr/local/bin/cloudctl
+/usr/local/bin/cloudctl login -a https://icp-console.<infra-loadbalancer-domain>:443 --skip-ssl-validation
+
+username: admin
+password: *****
+
+Create a new namespace for Integration and Upload the Platform Navigator Packages
+oc new-projectintegration 
+ocadm policy add-scc-to-groupibm-anyuid-sccsystem:serviceaccounts:integration
+
+cd /opt/installer_files/cluster/icp4icontent/
+
+docker login -u $(ocwhoami) -p $(ocwhoami -t) docker-registry.default.svc:5000
+
+
+/usr/local/bin/cloudctlcatalog load-archive --archive IBM-Cloud-Pak-for-Integration-2.0.0.tgz --registrydocker-registry.default.svc:5000/integration
+/usr/local/bin/cloudctlcatalog load-archive --archive IBM-Cloud-Pak-for-Integration-Asset-Repository-2.0.0.tgz --registrydocker-registry.default.svc:5000/integration
+
+Create a new namespace for ACE and Upload the App Connect Packages
+
+Note: ibm-anyuid-scc does not seem to Deploy ACE successfully, as a temporary workaround we applied the anyuid to the ACE namespace serviceaccounts
+
+Bastian Node 
+
+oc new-projectace
+ocadm policy add-scc-to-groupanyuidsystem:serviceaccounts:ace
+
+docker login -u $(ocwhoami) -p $(ocwhoami -t) docker-registry.default.svc:5000
+
+
+/usr/local/bin/cloudctlcatalog load-archive --archive IBM-App-Connect-Enterprise-for-IBM-Cloud-Pak-for-Integration-2.0.0.tgz --registrydocker-registry.default.svc:5000/ace
+
+ocget is -n ace
+NAMEDOCKERREPO                                                          TAGS             UPDATED
+ibm-ace-content-server-proddocker-registry.default.svc:5000/ace/ibm-ace-content-server-prod     11.0.0.5-amd64   13 minutesago
+ibm-ace-dashboard-proddocker-registry.default.svc:5000/ace/ibm-ace-dashboard-prod          11.0.0.5-amd64   11 minutesago
+ibm-ace-designer-flows-proddocker-registry.default.svc:5000/ace/ibm-ace-designer-flows-prod     11.0.0.5-amd64About a minuteago
+ibm-ace-icp-configurator-prod   docker-registry.default.svc:5000/ace/ibm-ace-icp-configurator-prod   11.0.0.5-amd64   4 minutesago
+ibm-ace-mq-server-proddocker-registry.default.svc:5000/ace/ibm-ace-mq-server-prod          11.0.0.5-amd64   4 minutesago
+ibm-ace-server-proddocker-registry.default.svc:5000/ace/ibm-ace-server-prod             11.0.0.5-amd64   8 minutesago
+
+oc new-appesbazocpnp-project1/ibm-ace-server-prod:11.0.0.5-amd64
+-->Found image 39e46b3 (2 months old) in image stream "esbazocpnp-project1/ibm-ace-server-prod" under tag "11.0.0.5-amd64" for "esbazocpnp-project1/ibm-ace-server-prod:11.0.0.5-amd64"
+
+    Integration Server for App Connect Enterprise 
+    --------------------------------------------- 
+    Integration Server for App Connect Enterprise
+
+    Tags: AppConnectEnterprise, IntegrationServer
+
+    * This image willbedeployed in deploymentconfig "ibm-ace-server-prod"
+    * Ports 7600/tcp, 7800/tcp, 7843/tcp, 9483/tcp willbe load balanced by service "ibm-ace-server-prod"
+      * Other containers canaccessthis service through the hostname "ibm-ace-server-prod"
+
+-->Creatingresources ...
+deploymentconfig.apps.openshift.io "ibm-ace-server-prod" created
+    service "ibm-ace-server-prod" created
+--> Success
+    Application is not exposed. Youcanexpose services to the outsideworld by executingone or more of the commandsbelow:
+     'ocexposesvc/ibm-ace-server-prod'
+ Run 'oc status' to view your app. 
+Create a new namespace for Datapower and Upload the Datapower Packages
+
+oc new-projectdatapower
+ocadm policy add-scc-to-groupanyuidsystem:serviceaccounts:datapower
+
+docker login -u $(ocwhoami) -p $(ocwhoami -t) docker-registry.default.svc:5000
+
+
+/usr/local/bin/cloudctlcatalog load-archive --archiveIBM-DataPower-Virtual-Edition-for-IBM-Cloud-Pak-for-Integration-1.0.3.tgz --registrydocker-registry.default.svc:5000/datapower
+
+
+Setting up datapowerappliance
+
+firstthingget the PVC up and running
+
+cat <<EOF>datapower-pvc.yaml
+apiVersion: v1
+metadata:
+name: datapower-pvc
+  annotations:
+volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+spec:
+accessModes:
+    - ReadWriteMany
+resources:
+requests:
+storage: 10Gi
+EOF
+
+occreate -f datapower-pvc.yaml
+
+ocget pvc
+NAME            STATUS    VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS          AGE
+datapower-pvc   Bound     pvc-adaa8e24-e058-11e9-b0d6-000d3a495ab410GiRWX            managed-nfs-storage22m
+
+oc new-appdatapower-icp4i:2018.4.1.6.309660-Nonproduction -e DATAPOWER_ACCEPT_LICENSE=true -e DATAPOWER_INTERACTIVE=true
+
+ocget dc -o yaml>datapower-dc.yaml
+
+Add the followingentries in the deploymentconfig file 
+
+stdin: true
+tty: true
+        ports:
+        - name: web-mgmt
+containerPort: 9090
+
+ocget dc -o yaml>datapower-dc.yaml
+
+
+ocapply -f datapower-dc.yaml --dry-run 
+
+ocattachdatapower-<> --stdin --tty
+
+
+
+*use `CTRL p q` to detach from container*
+
+
+
+Create a new namespace for MQ and Upload the MQ Packages
+oc new-projectmq-sbsa
+ocadm policy add-scc-to-groupanyuidsystem:serviceaccounts:mq-sbsa
+
+docker login -u $(ocwhoami) -p $(ocwhoami -t) docker-registry.default.svc:5000
+
+
+/usr/local/bin/cloudctlcatalog load-archive --archiveIBM-DataPower-Virtual-Edition-for-IBM-Cloud-Pak-for-Integration-1.0.3.tgz --registrydocker-registry.default.svc:5000/datapower
+
+cat <<EOF>mq-pvc.yaml
+apiVersion: v1
+metadata:
+name: mq-pvc
+  annotations:
+volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+spec:
+accessModes:
+    - ReadWriteMany
+resources:
+requests:
+storage: 10Gi
+EOF
+
+occreate -f mq-pvc.yaml
+
+4.	DevOpsBuild
+
+Jenkins Deployment 
+
+oc new-appjenkins-persistent -p ENABLE_OAUTH=false -e JENKINS_PASSWORD=sbsajenkins2019
+
+
+Youneed to register the redhat ID again to the followingregistries:
+
+registry.access.redhat.com
+registry.redhat.io
+registry.connect.redhat.com
+
+sample
+
+sudodockerpullregistry.redhat.io/openshift3/jenkins-agent-nodejs-8-rhel7:v3.11
+
+
+
+
+5.	Access Summary
+
+5.1	Accessing OCP cluster from command line
+Execute the following on the boot node using root user:
+[CLI]# oc login
+username: clusteradmin
+Password: ******
+5.2	Accessing OCP cluster from the Web Console
+URL: https://masterdns*******.westeurope.cloudapp.azure.com
+5.3	Accessing ICP cluster from command line
+Execute the following on the boot node using root user:
+[CLI]# /usr/local/bin/cloudctl login -a https://icp-console.<infra-loadbalancer-domain>:443 --skip-ssl-validation -u admin -c id-icp-cluster-account
+Password: ******
+5.4	Accessing ICP cluster from the Web Console
+URL: https://icp-console.<infra-loadbalancer-domain>
+5.5	App Connect Routes:
+[Port 7600] URL: 
+[Port 7800] URL: 
+5.6	Jenkins Routes:
+URL: 
+username: 
+password: 
+
+
+6.	RedHat OpenShift Administration
+
+6.1	User Administration
+
+Creating users 
+
+oc create Developer1clusterrolebinding --clusterrole=system:deployer --user=Developer1
+Htpasswd -b /etc/origions/master/htpasswdDeveloper1Developer1
+6.2	Performance Testing
+
+6.2.1	Disk bandwidth Test
+`Master Node 01`
+[root@ocpcluster-master01 ~]# dd if=/dev/zero of=/var/lib/etcd/fileDeleteMe bs=1024 count=10240 oflag=direct
+10240+0 records in
+10240+0 records out
+10485760 bytes (10 MB) copied, 1.45197 s, 7.2 MB/s
+
+`Master Node 02`
+[root@ocpcluster-master02 ~]# dd if=/dev/zero of=/var/lib/etcd/fileDeleteMe bs=1024 count=10240 oflag=direct
+10240+0 records in
+10240+0 records out
+10485760 bytes (10 MB) copied, 2.0939 s, 5.0 MB/s
+
+`Master Node 03`
+[root@ocpcluster-master03 ~]# dd if=/dev/zero of=/var/lib/etcd/fileDeleteMe bs=1024 count=10240 oflag=direct
+10240+0 records in
+10240+0 records out
+10485760 bytes (10 MB) copied, 1.27802 s, 8.2 MB/s
+6.2.2	FIO Test
+You need install fio before running the test
+
+yum install -y fio
+`Master Node 01`
+[root@ocpcluster-master01 ~]# fio --rw=write --ioengine=sync --fdatasync=1 --directory=/var/lib/etcd --size=22m --bs=2300 --name=sequential_write_iops_test
+sequential_write_iops_test: (g=0): rw=write, bs=(R) 2300B-2300B, (W) 2300B-2300B, (T) 2300B-2300B, ioengine=sync, iodepth=1
+fio-3.7
+Starting 1 process
+sequential_write_iops_test: Laying out IO file (1 file / 22MiB)
+Jobs: 1 (f=1): [W(1)][100.0%][r=0KiB/s,w=299KiB/s][r=0,w=133 IOPS][eta 00m:00s]
+sequential_write_iops_test: (groupid=0, jobs=1): err= 0: pid=90195: Wed Sep 25 07:49:27 2019
+  write: IOPS=128, BW=289KiB/s (296kB/s)(21.0MiB/77936msec)
+clat (usec): min=8, max=190, avg=16.96, stdev=10.73
+lat (usec): min=9, max=192, avg=18.00, stdev=11.10
+clat percentiles (usec):
+     |  1.00th=[   10],  5.00th=[   10], 10.00th=[   11], 20.00th=[   12],
+     | 30.00th=[   12], 40.00th=[   14], 50.00th=[   15], 60.00th=[   16],
+     | 70.00th=[   17], 80.00th=[   18], 90.00th=[   29], 95.00th=[   35],
+     | 99.00th=[   69], 99.50th=[   82], 99.90th=[  112], 99.95th=[  126],
+     | 99.99th=[  145]
+bw (  KiB/s): min=   62, max=  336, per=99.79%, avg=288.39, stdev=36.56, samples=155
+iops        : min=   28, max=  150, avg=128.57, stdev=16.32, samples=155
+lat (usec)   : 10=6.84%, 20=76.94%, 50=14.20%, 100=1.83%, 250=0.19%
+fsync/fdatasync/sync_file_range:
+    sync (msec): min=3, max=624, avg= 7.74, stdev= 7.65
+    sync percentiles (msec):
+     |  1.00th=[    5],  5.00th=[    5], 10.00th=[    5], 20.00th=[    5],
+     | 30.00th=[    5], 40.00th=[    8], 50.00th=[    9], 60.00th=[    9],
+     | 70.00th=[    9], 80.00th=[    9], 90.00th=[   10], 95.00th=[   13],
+     | 99.00th=[   20], 99.50th=[   23], 99.90th=[   58], 99.95th=[   64],
+     | 99.99th=[  180]
+cpu          : usr=0.29%, sys=1.69%, ctx=29520, majf=0, minf=32
+  IO depths    : 1=200.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,10029,0,0 short=10029,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=289KiB/s (296kB/s), 289KiB/s-289KiB/s (296kB/s-296kB/s), io=21.0MiB (23.1MB), run=77936-77936msec
+
+Disk stats (read/write):
+sda: ios=0/29087, merge=0/104, ticks=0/87541, in_queue=87534, util=97.95%
+
+`Master Node 02`
+
+[root@ocpcluster-master02 ~]# fio --rw=write --ioengine=sync --fdatasync=1 --directory=/var/lib/etcd --size=22m --bs=2300 --name=sequential_write_iops_test
+sequential_write_iops_test: (g=0): rw=write, bs=(R) 2300B-2300B, (W) 2300B-2300B, (T) 2300B-2300B, ioengine=sync, iodepth=1
+fio-3.7
+Starting 1 process
+sequential_write_iops_test: Laying out IO file (1 file / 22MiB)
+Jobs: 1 (f=1): [W(1)][100.0%][r=0KiB/s,w=267KiB/s][r=0,w=119 IOPS][eta 00m:00s]
+sequential_write_iops_test: (groupid=0, jobs=1): err= 0: pid=13694: Wed Sep 25 07:46:21 2019
+  write: IOPS=128, BW=288KiB/s (295kB/s)(21.0MiB/78198msec)
+clat (usec): min=11, max=1950, avg=19.88, stdev=28.25
+lat (usec): min=12, max=1951, avg=20.86, stdev=28.36
+clat percentiles (usec):
+     |  1.00th=[   13],  5.00th=[   14], 10.00th=[   14], 20.00th=[   14],
+     | 30.00th=[   15], 40.00th=[   18], 50.00th=[   19], 60.00th=[   20],
+     | 70.00th=[   20], 80.00th=[   22], 90.00th=[   25], 95.00th=[   34],
+     | 99.00th=[   58], 99.50th=[   71], 99.90th=[  118], 99.95th=[  139],
+     | 99.99th=[ 1860]
+bw (  KiB/s): min=  157, max=  332, per=99.80%, avg=287.44, stdev=25.20, samples=156
+iops        : min=   70, max=  148, avg=128.12, stdev=11.30, samples=156
+lat (usec)   : 20=70.77%, 50=27.59%, 100=1.44%, 250=0.17%, 500=0.01%
+lat (msec)   : 2=0.02%
+fsync/fdatasync/sync_file_range:
+    sync (msec): min=3, max=234, avg= 7.77, stdev= 5.15
+    sync percentiles (msec):
+     |  1.00th=[    5],  5.00th=[    5], 10.00th=[    5], 20.00th=[    5],
+     | 30.00th=[    5], 40.00th=[    8], 50.00th=[    9], 60.00th=[    9],
+     | 70.00th=[    9], 80.00th=[    9], 90.00th=[   11], 95.00th=[   13],
+     | 99.00th=[   21], 99.50th=[   28], 99.90th=[   61], 99.95th=[   68],
+     | 99.99th=[  218]
+cpu          : usr=0.30%, sys=1.75%, ctx=29569, majf=0, minf=31
+  IO depths    : 1=200.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,10029,0,0 short=10029,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=288KiB/s (295kB/s), 288KiB/s-288KiB/s (295kB/s-295kB/s), io=21.0MiB (23.1MB), run=78198-78198msec
+
+Disk stats (read/write):
+sda: ios=0/29083, merge=0/25, ticks=0/88116, in_queue=88108, util=98.26%
+
+`Master Node 03`
+[root@ocpcluster-master03 ~]# fio --rw=write --ioengine=sync --fdatasync=1 --directory=/var/lib/etcd --size=22m --bs=2300 --name=sequential_write_iops_test
+sequential_write_iops_test: (g=0): rw=write, bs=(R) 2300B-2300B, (W) 2300B-2300B, (T) 2300B-2300B, ioengine=sync, iodepth=1
+fio-3.7
+Starting 1 process
+sequential_write_iops_test: Laying out IO file (1 file / 22MiB)
+Jobs: 1 (f=1): [W(1)][100.0%][r=0KiB/s,w=265KiB/s][r=0,w=118 IOPS][eta 00m:00s]
+sequential_write_iops_test: (groupid=0, jobs=1): err= 0: pid=73627: Wed Sep 25 07:36:08 2019
+  write: IOPS=138, BW=311KiB/s (319kB/s)(21.0MiB/72407msec)
+clat (usec): min=9, max=482, avg=20.39, stdev=13.71
+lat (usec): min=10, max=483, avg=21.61, stdev=14.10
+clat percentiles (usec):
+     |  1.00th=[   11],  5.00th=[   11], 10.00th=[   11], 20.00th=[   13],
+     | 30.00th=[   14], 40.00th=[   16], 50.00th=[   17], 60.00th=[   18],
+     | 70.00th=[   20], 80.00th=[   29], 90.00th=[   34], 95.00th=[   42],
+     | 99.00th=[   70], 99.50th=[   80], 99.90th=[  120], 99.95th=[  169],
+     | 99.99th=[  258]
+bw (  KiB/s): min=  170, max=  354, per=99.76%, avg=310.24, stdev=32.78, samples=144
+iops        : min=   76, max=  158, avg=138.36, stdev=14.70, samples=144
+lat (usec)   : 10=0.77%, 20=69.90%, 50=25.95%, 100=3.10%, 250=0.26%
+lat (usec)   : 500=0.02%
+fsync/fdatasync/sync_file_range:
+    sync (msec): min=3, max=215, avg= 7.19, stdev= 5.81
+    sync percentiles (msec):
+     |  1.00th=[    4],  5.00th=[    4], 10.00th=[    4], 20.00th=[    4],
+     | 30.00th=[    4], 40.00th=[    7], 50.00th=[    7], 60.00th=[    7],
+     | 70.00th=[    8], 80.00th=[    8], 90.00th=[   13], 95.00th=[   16],
+     | 99.00th=[   27], 99.50th=[   31], 99.90th=[   65], 99.95th=[  105],
+     | 99.99th=[  203]
+cpu          : usr=0.38%, sys=1.96%, ctx=27830, majf=0, minf=31
+  IO depths    : 1=200.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,10029,0,0 short=10029,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=311KiB/s (319kB/s), 311KiB/s-311KiB/s (319kB/s-319kB/s), io=21.0MiB (23.1MB), run=72407-72407msec
+
+Disk stats (read/write):
+sda: ios=0/28966, merge=0/54, ticks=0/80668, in_queue=80655, util=96.55%
+
+6.2.3	ETCD Performance Check
+`Master Node 01`
+alias etcdctl3="ETCDCTL_API=3 etcdctl --endpoints=https://ocpcluster-master01:2379 --cacert=/etc/origin/master/master.etcd-ca.crt --cert=/etc/origin/master/master.etcd-client.crt --key=/etc/origin/master/master.etcd-client.key"
+
+[root@ocpcluster-master03 ~]# etcdctl3 check perf
+ 60 / 60 Boooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo! 100.00%1m0s
+PASS: Throughput is 150 writes/s
+PASS: Slowest request took 0.208819s
+PASS: Stddev is 0.011304s
+PASS
+
+`Master Node 02`
+
+alias etcdctl3="ETCDCTL_API=3 etcdctl --endpoints=https://ocpcluster-master02:2379 --cacert=/etc/origin/master/master.etcd-ca.crt --cert=/etc/origin/master/master.etcd-client.crt --key=/etc/origin/master/master.etcd-client.key"
+
+[root@ocpcluster-master03 ~]# etcdctl3 check perf
+ 60 / 60 Boooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo! 100.00%1m0s
+PASS: Throughput is 150 writes/s
+PASS: Slowest request took 0.176717s
+PASS: Stddev is 0.014200s
+PASS
+
+`Master Node 03`
+
+alias etcdctl3="ETCDCTL_API=3 etcdctl --endpoints=https://ocpcluster-master03:2379 --cacert=/etc/origin/master/master.etcd-ca.crt --cert=/etc/origin/master/master.etcd-client.crt --key=/etc/origin/master/master.etcd-client.key"
+
+[root@ocpcluster-master03 ~]# etcdctl3 check perf
+ 60 / 60 Boooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo! 100.00%1m0s
+PASS: Throughput is 150 writes/s
+PASS: Slowest request took 0.228523s
+PASS: Stddev is 0.014584s
+PASS
