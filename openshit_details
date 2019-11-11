@@ -1,6 +1,6 @@
 Kindly find the details below.
 
- 
+ kubectl -n default port-forward svc/docker-registry 5000:5000
 
  
 
