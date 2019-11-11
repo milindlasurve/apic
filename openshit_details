@@ -1,4 +1,6 @@
 Kindly find the details below.
+http://icici-ui-default.104.211.217.70.nip.io/authentication/Home
+
  sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 docker-registry-default.104.211.217.70.nip.io
