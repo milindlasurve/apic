@@ -1,0 +1,105 @@
+Kindly find the details below.
+
+ 
+
+ 
+
+Computer name :- ocpcluster-bastionA
+
+Public IP address :- 104.211.219.206
+
+Private IP address :- 172.200.0.4172.200.0.4
+
+DNS name :- bastiondnsuxz7eknnvxrye.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-infra01
+
+Public IP :- 104.211.217.70
+
+Private IP :- 172.200.0.68
+
+DNS name ;- infradnsd2flt3ewdendo.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-infra02
+
+Public IP :- 104.211.217.70
+
+Private IP :- 172.200.0.69
+
+DNS name ;- infradnsd2flt3ewdendo.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-infra03
+
+Public IP :- 104.211.217.70
+
+Private IP :- 172.200.0.70
+
+DNS name ;- infradnsd2flt3ewdendo.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-master01
+
+Public IP :- 104.211.227.58
+
+Private IP :- 172.200.0.5
+
+DNS name ;- masterdns63omo4wndig4y.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-master02
+
+Public IP :- 104.211.227.58
+
+Private IP :- 172.200.0.6
+
+DNS name ;- masterdns63omo4wndig4y.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-master03
+
+Public IP :- 104.211.227.58
+
+Private IP :- 172.200.0.7
+
+DNS name ;- masterdns63omo4wndig4y.southindia.cloudapp.azure.com
+
+ 
+
+Computer Name :- ocpcluster-node01
+
+Private IP :- 172.200.0.133
+
+ 
+
+Computer Name :- ocpcluster-node02
+
+Private IP :- 172.200.0.134
+
+ 
+
+Computer Name :- ocpcluster-node03
+
+Private IP :- 172.200.0.132
+
+ 
+
+ 
+
+Thanks & Regards
+
+Krishna Kumar Kulkarni |  Sonata Software Limited
+
+Mobile:- +91-8080190493
+
+ 
+
+Disclaimer: "The materials contained in this email and any attachments may contain confidential or legally privileged information. The information contained in this communication is intended solely for the use of the individual or entity to whom it is addressed and others authorized to receive it. If you are not the intended recipient you are hereby notified that any disclosure, copying, distribution or taking any action in reliance on the contents of this information is strictly prohibited and may be unlawful. If you have received this communication in error, please notify us immediately by responding to this email and then delete it from your system. Sonata is neither liable for the proper and complete transmission of the information contained in this communication nor for any delay in its receipt"
