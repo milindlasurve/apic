@@ -1,4 +1,27 @@
 Kindly find the details below.
+
+
+Public IP address
+
+13.71.81.15
+
+ 
+
+Private IP address
+
+172.19.64.7
+
+ 
+
+Virtual network/subnet
+
+openshiftvnet/mastersubnet
+
+ 
+
+DNS name
+
+masterdnswtur3f4w6lshw.southindia.cloudapp.azure.com
 "appId": "de161759-3436-476d-aa0e-02b9d969535c",
 
   "displayName": "openshiftxpressconnect",
